@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Macro Buddy</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <img src="https://cdn-icons-png.flaticon.com/512/1046/1046784.png" class="logo">
+  <h1 class="title">Macro Buddy</h1>
+</header>
+
+<!-- PAGE 1 -->
+<section class="page active" id="page1">
+  <h2>Welcome to Macro Buddy 👋</h2>
+  <p>Your AI-powered personalized diet & macro planner.</p>
+  <button onclick="nextPage(2)">Proceed</button>
+</section>
+
+<!-- PAGE 2 -->
+<section class="page" id="page2">
+  <h2>Tell us about yourself</h2>
+
+  <div class="form-grid">
+    <input type="number" id="age" placeholder="Age">
+    <select id="gender">
+      <option>Male</option>
+      <option>Female</option>
+    </select>
+    <input type="number" id="height" placeholder="Height (cm)">
+    <input type="number" id="weight" placeholder="Weight (kg)">
+    <select id="goal">
+      <option>Fat Loss</option>
+      <option>Muscle Gain</option>
+      <option>Maintenance</option>
+    </select>
+    <select id="activity">
+      <option>Sedentary</option>
+      <option>Moderate</option>
+      <option>Active</option>
+    </select>
+    <input type="number" id="budget" placeholder="Budget ₹ / day">
+    <select id="food">
+      <option>Veg</option>
+      <option>Egg</option>
+      <option>Non-Veg</option>
+    </select>
+    <input type="text" id="allergy" placeholder="Allergies (if any)">
+    <input type="number" id="meals" placeholder="Meals per day">
+    <input type="text" id="indian" placeholder="Indian food preference">
+  </div>
+
+  <button onclick="generatePlan()">Generate Meal Plan</button>
+</section>
+
+<!-- PAGE 3 -->
+<section class="page" id="page3">
+  <h2>Your AI Generated Diet Plan</h2>
+  <div id="output"></div>
+</section>
+
+<script src="script.js"></script>
+</body>
+</html>
