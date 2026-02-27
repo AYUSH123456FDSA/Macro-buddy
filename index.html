@@ -1,67 +1,407 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Macro Buddy</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Macro Counter + Firestore</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+
+  <style>
+    :root {
+      --bg: #f4f7ff;
+      --card: #ffffff;
+      --text: #1f2a44;
+      --muted: #6f7a93;
+      --primary: #4b6bff;
+      --primary-dark: #3b56d8;
+      --ok: #00a86b;
+      --ok-bg: #e8f5e9;
+      --warn: #c62828;
+      --warn-bg: #ffebee;
+      --border: #dbe2f2;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      background: linear-gradient(180deg, #eef2ff 0%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 16px 48px;
+    }
+
+    .title { margin: 0 0 6px; font-size: 2rem; }
+    .subtitle { margin: 0 0 22px; color: var(--muted); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 10px 24px rgba(37, 58, 136, 0.08);
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    }
+
+    label { font-size: 0.88rem; color: var(--muted); display: block; margin-bottom: 6px; }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(75, 107, 255, 0.16); }
+
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-light { background: #eef2ff; color: var(--text); }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    .summary-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fbfcff;
+    }
+
+    .summary-item h3 {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .summary-item p { margin: 7px 0 0; font-size: 1.25rem; font-weight: 700; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.92rem; }
+    th, td { text-align: left; border-bottom: 1px solid var(--border); padding: 10px 8px; }
+    th { color: var(--muted); font-weight: 600; }
+
+    .note { color: var(--ok); margin-top: 8px; font-weight: 600; min-height: 20px; }
+    .empty { color: var(--muted); margin: 8px 0; }
+
+    .alert {
+      color: var(--warn);
+      background: var(--warn-bg);
+      border: 1px solid #ef9a9a;
+      border-radius: 10px;
+      padding: 10px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+
+    .alert-ok {
+      color: var(--ok);
+      background: var(--ok-bg);
+      border: 1px solid #a5d6a7;
+      border-radius: 10px;
+      padding: 10px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+
+    .danger-row td {
+      background: #fff4f4;
+      color: var(--warn);
+      font-weight: 600;
+    }
+
+    .safe-row td {
+      background: #f1fbf5;
+      color: #1b5e20;
+    }
+
+    .legend {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .status {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+  </style>
 </head>
 <body>
+  <div id="root"></div>
 
-<!-- HEADER -->
-<header class="header">
-  <img src="https://cdn-icons-png.flaticon.com/512/1046/1046784.png" class="logo">
-  <h1 class="title">Macro Buddy</h1>
-</header>
+  <script type="text/babel">
+    const COLLECTION = "macroEntries";
+    const KCAL_LIMIT = 2000;
 
-<!-- PAGE 1 -->
-<section class="page active" id="page1">
-  <h2>Welcome to Macro Buddy 👋</h2>
-  <p>Your AI-powered personalized diet & macro planner.</p>
-  <button onclick="nextPage(2)">Proceed</button>
-</section>
+    const todayISO = () => new Date().toISOString().slice(0, 10);
 
-<!-- PAGE 2 -->
-<section class="page" id="page2">
-  <h2>Tell us about yourself</h2>
+    function getFirebaseConfig() {
+      return {
+        apiKey: window.FIREBASE_API_KEY || "",
+        authDomain: window.FIREBASE_AUTH_DOMAIN || "",
+        projectId: window.FIREBASE_PROJECT_ID || "",
+        storageBucket: window.FIREBASE_STORAGE_BUCKET || "",
+        messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID || "",
+        appId: window.FIREBASE_APP_ID || "",
+      };
+    }
 
-  <div class="form-grid">
-    <input type="number" id="age" placeholder="Age">
-    <select id="gender">
-      <option>Male</option>
-      <option>Female</option>
-    </select>
-    <input type="number" id="height" placeholder="Height (cm)">
-    <input type="number" id="weight" placeholder="Weight (kg)">
-    <select id="goal">
-      <option>Fat Loss</option>
-      <option>Muscle Gain</option>
-      <option>Maintenance</option>
-    </select>
-    <select id="activity">
-      <option>Sedentary</option>
-      <option>Moderate</option>
-      <option>Active</option>
-    </select>
-    <input type="number" id="budget" placeholder="Budget ₹ / day">
-    <select id="food">
-      <option>Veg</option>
-      <option>Egg</option>
-      <option>Non-Veg</option>
-    </select>
-    <input type="text" id="allergy" placeholder="Allergies (if any)">
-    <input type="number" id="meals" placeholder="Meals per day">
-    <input type="text" id="indian" placeholder="Indian food preference">
-  </div>
+    function initFirestore() {
+      const config = getFirebaseConfig();
+      const hasRequired = config.apiKey && config.authDomain && config.projectId && config.appId;
+      if (!hasRequired) return null;
 
-  <button onclick="generatePlan()">Generate Meal Plan</button>
-</section>
+      if (!firebase.apps.length) firebase.initializeApp(config);
+      return firebase.firestore();
+    }
 
-<!-- PAGE 3 -->
-<section class="page" id="page3">
-  <h2>Your AI Generated Diet Plan</h2>
-  <div id="output"></div>
-</section>
+    function MacroApp() {
+      const [db, setDb] = React.useState(null);
+      const [entries, setEntries] = React.useState([]);
+      const [form, setForm] = React.useState({ date: todayISO(), kcal: "", carbs: "", fats: "", protein: "" });
+      const [message, setMessage] = React.useState("");
+      const [loading, setLoading] = React.useState(true);
 
-<script src="script.js"></script>
+      React.useEffect(() => {
+        const firestore = initFirestore();
+        setDb(firestore);
+
+        if (!firestore) {
+          setMessage("Firestore not configured yet. Add Firebase config in window.FIREBASE_* constants.");
+          setLoading(false);
+          return;
+        }
+
+        const unsubscribe = firestore.collection(COLLECTION).onSnapshot(
+          (snapshot) => {
+            const rows = snapshot.docs
+              .map((d) => d.data())
+              .sort((a, b) => a.date.localeCompare(b.date));
+            setEntries(rows);
+            setLoading(false);
+          },
+          () => {
+            setMessage("Could not read Firestore data. Check rules/config.");
+            setLoading(false);
+          }
+        );
+
+        return () => unsubscribe();
+      }, []);
+
+      const weeklyEntries = React.useMemo(() => {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const weekAgo = new Date(now);
+        weekAgo.setDate(now.getDate() - 6);
+
+        return [...entries].filter((e) => {
+          const d = new Date(e.date + "T00:00:00");
+          return d >= weekAgo && d <= now;
+        });
+      }, [entries]);
+
+      const weeklyTotals = React.useMemo(
+        () => weeklyEntries.reduce(
+          (acc, e) => ({
+            kcal: acc.kcal + Number(e.kcal || 0),
+            carbs: acc.carbs + Number(e.carbs || 0),
+            fats: acc.fats + Number(e.fats || 0),
+            protein: acc.protein + Number(e.protein || 0),
+          }),
+          { kcal: 0, carbs: 0, fats: 0, protein: 0 }
+        ),
+        [weeklyEntries]
+      );
+
+      const overLimitDays = React.useMemo(
+        () => weeklyEntries.filter((e) => Number(e.kcal || 0) > KCAL_LIMIT),
+        [weeklyEntries]
+      );
+
+      const safeDays = React.useMemo(
+        () => weeklyEntries.filter((e) => Number(e.kcal || 0) <= KCAL_LIMIT),
+        [weeklyEntries]
+      );
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!db) {
+          setMessage("Set Firebase config first. Firestore is required for saving.");
+          return;
+        }
+
+        const payload = {
+          date: form.date,
+          kcal: Number(form.kcal || 0),
+          carbs: Number(form.carbs || 0),
+          fats: Number(form.fats || 0),
+          protein: Number(form.protein || 0),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        };
+
+        if (!payload.date) return;
+
+        try {
+          await db.collection(COLLECTION).doc(payload.date).set(payload, { merge: true });
+          setMessage(`Saved ${payload.date} to Firestore.`);
+          setTimeout(() => setMessage(""), 1800);
+        } catch {
+          setMessage("Save failed. Check Firestore rules and project config.");
+        }
+      };
+
+      return (
+        <div className="container">
+          <h1 className="title">Daily Macro Counter (Firestore)</h1>
+          <p className="subtitle">Save daily macros in Firestore, calculate last 7 days totals, and show red alerts for KCAL &gt; {KCAL_LIMIT}.</p>
+
+          <div className="card">
+            <h2>Firestore Setup in App</h2>
+            <p className="status">
+              Status: {db ? "Connected to Firestore" : "Not connected"}
+            </p>
+            <p className="status">
+              Add your config before this script runs:
+              <br />
+              <code>window.FIREBASE_API_KEY</code>, <code>window.FIREBASE_AUTH_DOMAIN</code>, <code>window.FIREBASE_PROJECT_ID</code>,
+              <code> window.FIREBASE_STORAGE_BUCKET</code>, <code>window.FIREBASE_MESSAGING_SENDER_ID</code>, <code>window.FIREBASE_APP_ID</code>.
+            </p>
+          </div>
+
+          <div className="card">
+            <form onSubmit={handleSubmit}>
+              <div className="grid">
+                <div>
+                  <label>Date</label>
+                  <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+                </div>
+                <div>
+                  <label>KCAL</label>
+                  <input type="number" min="0" value={form.kcal} onChange={(e) => setForm({ ...form, kcal: e.target.value })} placeholder="e.g. 2200" />
+                </div>
+                <div>
+                  <label>Carbs (g)</label>
+                  <input type="number" min="0" value={form.carbs} onChange={(e) => setForm({ ...form, carbs: e.target.value })} placeholder="e.g. 250" />
+                </div>
+                <div>
+                  <label>Fats (g)</label>
+                  <input type="number" min="0" value={form.fats} onChange={(e) => setForm({ ...form, fats: e.target.value })} placeholder="e.g. 75" />
+                </div>
+                <div>
+                  <label>Protein (g)</label>
+                  <input type="number" min="0" value={form.protein} onChange={(e) => setForm({ ...form, protein: e.target.value })} placeholder="e.g. 140" />
+                </div>
+              </div>
+
+              <div className="actions">
+                <button className="btn-primary" type="submit">Save Daily Macro</button>
+              </div>
+              <p className="note">{message}</p>
+            </form>
+          </div>
+
+          <div className="card">
+            <h2>Weekly Totals (Last 7 Days)</h2>
+            {loading ? <p className="empty">Loading from Firestore...</p> : null}
+            <div className="summary-grid">
+              <div className="summary-item"><h3>KCAL</h3><p>{weeklyTotals.kcal}</p></div>
+              <div className="summary-item"><h3>Carbs</h3><p>{weeklyTotals.carbs} g</p></div>
+              <div className="summary-item"><h3>Fats</h3><p>{weeklyTotals.fats} g</p></div>
+              <div className="summary-item"><h3>Protein</h3><p>{weeklyTotals.protein} g</p></div>
+            </div>
+
+            {overLimitDays.length > 0 ? (
+              <div className="alert">
+                Red Alert: KCAL exceeded {KCAL_LIMIT} on {overLimitDays.map((d) => `${d.date} (${d.kcal})`).join(", ")}.
+              </div>
+            ) : null}
+
+            {weeklyEntries.length > 0 && overLimitDays.length === 0 ? (
+              <div className="alert-ok">
+                Green Status: Great job! All logged days are within the {KCAL_LIMIT} KCAL limit.
+              </div>
+            ) : null}
+
+            <p className="legend">
+              Color link: <strong>Red</strong> rows/alerts = KCAL above {KCAL_LIMIT}. <strong>Green</strong> rows/status = KCAL within {KCAL_LIMIT}.
+              This connects the red code and green code to the same calorie limit rule.
+            </p>
+
+            {weeklyEntries.length === 0 ? (
+              <p className="empty">No entries in the last 7 days yet.</p>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>KCAL</th>
+                    <th>Carbs (g)</th>
+                    <th>Fats (g)</th>
+                    <th>Protein (g)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weeklyEntries.map((entry) => {
+                    const isHigh = Number(entry.kcal || 0) > KCAL_LIMIT;
+                    return (
+                      <tr key={entry.date} className={isHigh ? "danger-row" : "safe-row"}>
+                        <td>{entry.date}</td>
+                        <td>{entry.kcal}</td>
+                        <td>{entry.carbs}</td>
+                        <td>{entry.fats}</td>
+                        <td>{entry.protein}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+
+            {safeDays.length > 0 ? (
+              <p className="status">Green days this week: {safeDays.length} / {weeklyEntries.length}</p>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<MacroApp />);
+  </script>
 </body>
 </html>
